@@ -19,8 +19,8 @@
 - **Tech Stack:** React 18 + Vite + IndexedDB
 - **Deployment:** Netlify CI/CD (auto-deploy on Git push)
 
-### 2. **Mobile Screening PWA** (60% Complete)
-- **Dev URL:** http://localhost:5175
+### 2. **Mobile Screening PWA** (90% Complete)
+- **Dev URL:** http://localhost:5176
 - **Completed Features:**
   - ✅ Home screen with screener info
   - ✅ QR code scanner (camera access)
@@ -28,11 +28,12 @@
   - ✅ IndexedDB offline database
   - ✅ Student roster import
   - ✅ Basic navigation
+  - ✅ Vision acuity test screen (Tumbling E)
+  - ✅ Hearing test screen (kid-friendly pictures)
+  - ✅ Results screen (list & detail views)
+  - ✅ Complete styling for all screens
 - **In Progress:**
-  - 🚧 Vision acuity test screen
-  - 🚧 Hearing test screen
-  - 🚧 Results screen
-  - 🚧 Export functionality (FHIR/HL7)
+  - 🚧 Export functionality (FHIR/HL7/CSV)
 - **Tech Stack:** React 18 + Vite + IndexedDB + Web APIs
 
 ### 3. **Service Layer** (90% Complete)
