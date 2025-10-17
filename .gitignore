@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+.npm
+.yarn
+
+# Build outputs
+dist/
+build/
+*.log
+*.tgz
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Testing
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+lighthouse-*.report.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temp files
+*.tmp
+.cache/
