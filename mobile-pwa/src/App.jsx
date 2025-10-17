@@ -6,6 +6,9 @@ import VisionScreen from './screens/VisionScreen';
 import HearingScreen from './screens/HearingScreen';
 import ResultsScreen from './screens/ResultsScreen';
 import ExportScreen from './screens/ExportScreen';
+import CalibrationScreen from './screens/CalibrationScreen';
+import AnalyticsDashboard from './screens/AnalyticsDashboard';
+import EMRConfigScreen from './screens/EMRConfigScreen';
 import './App.css';
 
 function App() {
@@ -67,6 +70,12 @@ function App() {
         return <ResultsScreen navigate={navigate} data={screenData} />;
       case 'export':
         return <ExportScreen navigate={navigate} data={screenData} />;
+      case 'calibration':
+        return <CalibrationScreen navigate={navigate} />;
+      case 'analytics':
+        return <AnalyticsDashboard navigate={navigate} />;
+      case 'emr-config':
+        return <EMRConfigScreen navigate={navigate} />;
       default:
         return <HomeScreen navigate={navigate} />;
     }

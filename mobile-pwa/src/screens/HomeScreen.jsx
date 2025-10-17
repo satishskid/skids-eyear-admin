@@ -159,6 +159,36 @@ function HomeScreen({ navigate }) {
           </button>
         </div>
 
+        {/* Advanced Features */}
+        <div className="card">
+          <div className="card-header">⚙️ Advanced Features</div>
+          <div className="advanced-features-grid">
+            <button
+              className="feature-button"
+              onClick={() => navigate('calibration')}
+            >
+              <span className="feature-icon">🎧</span>
+              <span className="feature-label">Device Calibration</span>
+            </button>
+            
+            <button
+              className="feature-button"
+              onClick={() => navigate('analytics')}
+            >
+              <span className="feature-icon">📈</span>
+              <span className="feature-label">Analytics Dashboard</span>
+            </button>
+            
+            <button
+              className="feature-button"
+              onClick={() => navigate('emr-config')}
+            >
+              <span className="feature-icon">🏥</span>
+              <span className="feature-label">EMR Integration</span>
+            </button>
+          </div>
+        </div>
+
         {/* Info */}
         <div className="info-box">
           <p><strong>Quick Start:</strong></p>

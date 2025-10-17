@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../services/indexedDB';
+import emrIntegration from '../services/emrIntegrationAPI';
 import VisionReport from '../components/VisionReport';
 import './ResultsScreen.css';
 
@@ -8,6 +9,7 @@ function ResultsScreen({ navigate, data }) {
   const [selectedResult, setSelectedResult] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showVisionReport, setShowVisionReport] = useState(false);
+  const [exportingToEMR, setExportingToEMR] = useState(false);
 
   useEffect(() => {
     loadResults();
@@ -81,6 +83,39 @@ function ResultsScreen({ navigate, data }) {
 
   const handleCloseVisionReport = () => {
     setShowVisionReport(false);
+  };
+
+  const handleExportToEMR = async (result) => {
+    // Check if EMR is configured
+    const emrConfig = localStorage.getItem('emrConfig');
+    if (!emrConfig) {
+      if (confirm('EMR integration is not configured. Would you like to set it up now?')) {
+        navigate('emr-config');
+      }
+      return;
+    }
+
+    setExportingToEMR(true);
+    try {
+      const config = JSON.parse(emrConfig);
+      
+      // Initialize EMR integration
+      await emrIntegration.initialize(config.system, config);
+      
+      // Export result
+      const exportResult = await emrIntegration.exportResult(result);
+      
+      if (exportResult.success) {
+        alert('✅ Successfully exported to EMR system!');
+      } else {
+        alert('❌ Failed to export to EMR: ' + exportResult.error);
+      }
+    } catch (error) {
+      console.error('EMR export error:', error);
+      alert('❌ Error exporting to EMR: ' + error.message);
+    } finally {
+      setExportingToEMR(false);
+    }
   };
 
   if (loading) {
@@ -257,6 +292,15 @@ function ResultsScreen({ navigate, data }) {
             >
               📤 Export Results
             </button>
+            
+            <button
+              className="button button-primary"
+              onClick={() => handleExportToEMR(selectedResult)}
+              disabled={exportingToEMR}
+            >
+              {exportingToEMR ? '⏳ Exporting...' : '🏥 Export to EMR'}
+            </button>
+            
             <button
               className="button button-secondary"
               onClick={() => navigate('home')}

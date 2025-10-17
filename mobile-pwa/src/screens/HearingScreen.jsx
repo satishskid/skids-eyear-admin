@@ -1,9 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../services/indexedDB';
+import ambientNoiseDetector from '../services/ambientNoiseDetector';
+import deviceCalibration from '../services/deviceCalibration';
+import { EXTENDED_HEARING_TESTS, AudiogramAnalyzer } from '../services/extendedAudiometry';
+import NoiseMonitor from '../components/NoiseMonitor';
 import './HearingScreen.css';
 
-// Sound-to-frequency mapping for pediatric audiometry
-const HEARING_TESTS = [
+// Use extended tests if enabled, otherwise standard 3-frequency
+const useExtendedTest = true; // Can be configurable
+const HEARING_TESTS = useExtendedTest ? EXTENDED_HEARING_TESTS : [
   {
     id: 'dog',
     name: 'Dog Barking',
@@ -39,6 +44,15 @@ function HearingScreen({ navigate, data }) {
   const [showFeedback, setShowFeedback] = useState(null);
   const [waitingForResponse, setWaitingForResponse] = useState(false);
   
+  // Noise monitoring state
+  const [noiseLevel, setNoiseLevel] = useState(null);
+  const [noiseAcceptable, setNoiseAcceptable] = useState(true);
+  const [noiseMonitoring, setNoiseMonitoring] = useState(false);
+  const [environmentAssessed, setEnvironmentAssessed] = useState(false);
+  
+  // Audiogram analysis
+  const [audiogramReport, setAudiogramReport] = useState(null);
+  
   const audioContextRef = useRef(null);
   const gainNodeRef = useRef(null);
   const oscillatorRef = useRef(null);
@@ -49,12 +63,52 @@ function HearingScreen({ navigate, data }) {
     gainNodeRef.current = audioContextRef.current.createGain();
     gainNodeRef.current.connect(audioContextRef.current.destination);
     
+    // Load calibration
+    deviceCalibration.loadFromLocalStorage();
+    
     return () => {
       if (audioContextRef.current) {
         audioContextRef.current.close();
       }
+      // Cleanup noise detector
+      if (noiseMonitoring) {
+        ambientNoiseDetector.cleanup();
+      }
     };
   }, []);
+
+  // Initialize noise monitoring
+  const initializeNoiseMonitoring = async () => {
+    const initResult = await ambientNoiseDetector.initialize();
+    if (!initResult.success) {
+      console.warn('Noise monitoring unavailable:', initResult.error);
+      return false;
+    }
+    return true;
+  };
+
+  // Assess environment before test
+  const assessEnvironment = async () => {
+    const assessment = await ambientNoiseDetector.assessEnvironment(5000);
+    setNoiseLevel(assessment.maximum);
+    setNoiseAcceptable(assessment.acceptable);
+    setEnvironmentAssessed(true);
+    return assessment;
+  };
+
+  // Start continuous noise monitoring
+  const startNoiseMonitoring = () => {
+    ambientNoiseDetector.startMonitoring((status) => {
+      setNoiseLevel(status.level.toFixed(1));
+      setNoiseAcceptable(status.acceptable);
+      
+      // Pause test if noise too high
+      if (!status.acceptable && isPlaying) {
+        console.warn('Test paused: noise too high');
+      }
+    }, 1000);
+    setNoiseMonitoring(true);
+  };
 
   const playTone = async (frequency, durationMs = 1000) => {
     const audioContext = audioContextRef.current;
@@ -65,8 +119,9 @@ function HearingScreen({ navigate, data }) {
     oscillator.type = 'sine';
     oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
     
-    // Set volume (30 dB HL approximation - adjust for headphones)
-    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+    // Get calibrated gain for this frequency
+    const calibratedGain = deviceCalibration.getCalibratedGain(frequency);
+    gainNode.gain.setValueAtTime(calibratedGain, audioContext.currentTime);
     
     oscillator.connect(gainNode);
     oscillator.start();
@@ -82,6 +137,12 @@ function HearingScreen({ navigate, data }) {
   };
 
   const startTest = async () => {
+    // Initialize noise monitoring
+    const noiseInitialized = await initializeNoiseMonitoring();
+    if (noiseInitialized) {
+      startNoiseMonitoring();
+    }
+    
     setTestStarted(true);
     await runCurrentTest();
   };
@@ -133,19 +194,57 @@ function HearingScreen({ navigate, data }) {
   };
 
   const finishTest = async () => {
+    // Stop noise monitoring
+    if (noiseMonitoring) {
+      ambientNoiseDetector.cleanup();
+      setNoiseMonitoring(false);
+    }
+    
     // Calculate pass/fail
     const correctCount = Object.values(responses).filter(r => r === true).length;
     const pass = correctCount === HEARING_TESTS.length; // Must get all correct
     
-    const hearingResult = {
+    // Build frequency results based on test type
+    let hearingResult = {
       responses,
       correctCount,
       totalTests: HEARING_TESTS.length,
       pass,
-      frequency_1000_hz: responses['dog'] || false,
-      frequency_2000_hz: responses['bird'] || false,
-      frequency_4000_hz: responses['bell'] || false,
     };
+    
+    // Add frequency-specific results
+    if (useExtendedTest) {
+      // Extended 5-frequency test
+      hearingResult = {
+        ...hearingResult,
+        frequency_500_hz: responses['low-drum'] || false,
+        frequency_1000_hz: responses['dog'] || false,
+        frequency_2000_hz: responses['bird'] || false,
+        frequency_4000_hz: responses['bell'] || false,
+        frequency_8000_hz: responses['high-whistle'] || false,
+      };
+      
+      // Analyze audiogram pattern
+      const analyzer = new AudiogramAnalyzer({
+        500: responses['low-drum'] || false,
+        1000: responses['dog'] || false,
+        2000: responses['bird'] || false,
+        4000: responses['bell'] || false,
+        8000: responses['high-whistle'] || false,
+      });
+      
+      const audiogramAnalysis = analyzer.generateReport();
+      setAudiogramReport(audiogramAnalysis);
+      hearingResult.audiogramAnalysis = audiogramAnalysis;
+    } else {
+      // Standard 3-frequency test
+      hearingResult = {
+        ...hearingResult,
+        frequency_1000_hz: responses['dog'] || false,
+        frequency_2000_hz: responses['bird'] || false,
+        frequency_4000_hz: responses['bell'] || false,
+      };
+    }
     
     // Save to database
     const result = {
@@ -196,6 +295,15 @@ function HearingScreen({ navigate, data }) {
       </div>
 
       <div className="screen-content">
+        {/* Noise Monitor - Always visible during test */}
+        {testStarted && !testComplete && (
+          <NoiseMonitor 
+            noiseLevel={noiseLevel} 
+            noiseAcceptable={noiseAcceptable}
+            isMonitoring={noiseMonitoring}
+          />
+        )}
+
         {!testStarted && !testComplete && (
           <div className="card">
             <div className="card-header">👂 Hearing Screening</div>
@@ -315,6 +423,28 @@ function HearingScreen({ navigate, data }) {
                   <strong>Score:</strong> {Object.values(responses).filter(r => r).length} / {HEARING_TESTS.length} correct
                 </p>
                 <p><strong>Criteria:</strong> Must identify all sounds correctly</p>
+                
+                {/* Audiogram Analysis for Extended Test */}
+                {audiogramReport && (
+                  <div className="audiogram-analysis" style={{ marginTop: '1.5rem', padding: '1rem', background: '#f3f4f6', borderRadius: '0.5rem' }}>
+                    <p><strong>📊 Audiogram Analysis:</strong></p>
+                    <p><strong>Pattern:</strong> {audiogramReport.pattern}</p>
+                    <p><strong>Interpretation:</strong> {audiogramReport.interpretation}</p>
+                    {audiogramReport.possibleCauses.length > 0 && (
+                      <p><strong>Possible Causes:</strong> {audiogramReport.possibleCauses.join(', ')}</p>
+                    )}
+                    <p><strong>Referral Priority:</strong> <span style={{ 
+                      color: audiogramReport.referralUrgency === 'high' ? '#dc2626' : 
+                             audiogramReport.referralUrgency === 'medium' ? '#f59e0b' : '#10b981'
+                    }}>{audiogramReport.referralUrgency.toUpperCase()}</span></p>
+                    {audiogramReport.sii && (
+                      <p><strong>Speech Intelligibility Index:</strong> {(audiogramReport.sii * 100).toFixed(0)}%</p>
+                    )}
+                    {audiogramReport.recommendations && (
+                      <p><strong>Recommendations:</strong> {audiogramReport.recommendations}</p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
