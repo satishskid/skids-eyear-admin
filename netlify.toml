@@ -1,9 +1,9 @@
 [build]
-  # Build command - installs dependencies and builds the admin portal
-  command = "cd admin-portal && npm install && npm run build"
+  # Build command - installs dependencies and builds the mobile PWA
+  command = "cd mobile-pwa && npm install && npm run build"
   
   # Directory to deploy
-  publish = "admin-portal/dist"
+  publish = "mobile-pwa/dist"
   
   # Node version
   environment = { NODE_VERSION = "18" }
@@ -31,7 +31,7 @@
   to = "/index.html"
   status = 200
 
-# Headers for security
+# Headers for security and PWA support
 [[headers]]
   for = "/*"
   [headers.values]
@@ -39,7 +39,10 @@
     X-XSS-Protection = "1; mode=block"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    # Allow camera and microphone for vision/hearing tests
+    Permissions-Policy = "camera=(self), microphone=(self), geolocation=()"
+    # HTTPS only
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
 
 # Cache static assets
 [[headers]]
@@ -47,8 +50,20 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# Service Worker
+# Service Worker - must not be cached
 [[headers]]
-  for = "/service-worker.js"
+  for = "/sw.js"
   [headers.values]
     Cache-Control = "no-cache, no-store, must-revalidate"
+
+[[headers]]
+  for = "/workbox-*.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+# PWA Manifest
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    Content-Type = "application/manifest+json"
