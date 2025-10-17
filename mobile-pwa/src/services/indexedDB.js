@@ -117,8 +117,8 @@ class IndexedDBService {
   async getUnsyncedResults() {
     const tx = this.db.transaction(['results'], 'readonly');
     const store = tx.objectStore('results');
-    const index = store.index('synced');
-    return index.getAll(false);
+    const allResults = await store.getAll();
+    return allResults.filter(r => r.synced === false);
   }
 
   async markAsSynced(resultId) {

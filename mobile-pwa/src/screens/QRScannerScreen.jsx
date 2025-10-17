@@ -23,10 +23,11 @@ function QRScannerScreen({ navigate, data }) {
   const loadChildren = async () => {
     try {
       const allChildren = await db.getAllChildren();
-      setChildren(allChildren);
+      setChildren(allChildren || []);
     } catch (err) {
       console.error('Error loading children:', err);
       setError('Failed to load student roster');
+      setChildren([]);
     }
   };
 
