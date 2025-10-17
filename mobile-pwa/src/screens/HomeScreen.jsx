@@ -10,6 +10,7 @@ function HomeScreen({ navigate }) {
   });
   const [screenerName, setScreenerName] = useState('');
   const [schoolCode, setSchoolCode] = useState('');
+  const [showQuickStart, setShowQuickStart] = useState(false);
 
   useEffect(() => {
     loadStats();
@@ -189,17 +190,101 @@ function HomeScreen({ navigate }) {
           </div>
         </div>
 
-        {/* Info */}
-        <div className="info-box">
-          <p><strong>Quick Start:</strong></p>
-          <ol>
-            <li>Import student roster (JSON/CSV)</li>
-            <li>Enter your name and school code</li>
-            <li>Tap "Start Screening"</li>
-            <li>Scan QR code or search for student</li>
-            <li>Conduct vision and hearing tests</li>
-            <li>Review and export results</li>
-          </ol>
+        {/* Info - Inspirational Content & Collapsible Quick Start */}
+        <div className="info-section">
+          {/* Inspirational Banner */}
+          <div className="inspiration-banner">
+            <div className="inspiration-icon">👁️👂</div>
+            <div className="inspiration-content">
+              <h3 className="inspiration-title">Empowering Every Child's Potential</h3>
+              <p className="inspiration-text">
+                Early detection changes lives. Your screening work identifies vision and hearing 
+                issues that could affect a child's learning, development, and future success.
+              </p>
+              <div className="impact-stats">
+                <div className="impact-item">
+                  <span className="impact-number">80%</span>
+                  <span className="impact-label">of learning is visual</span>
+                </div>
+                <div className="impact-item">
+                  <span className="impact-number">1 in 5</span>
+                  <span className="impact-label">children have vision problems</span>
+                </div>
+                <div className="impact-item">
+                  <span className="impact-number">1 in 8</span>
+                  <span className="impact-label">children have hearing loss</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Pro Tips */}
+          <div className="tips-section">
+            <div className="tips-header">💡 Pro Tips for Effective Screening</div>
+            <div className="tips-grid">
+              <div className="tip-card">
+                <div className="tip-icon">🎯</div>
+                <div className="tip-title">Create a Quiet Environment</div>
+                <div className="tip-text">Find a calm space with minimal distractions for accurate results</div>
+              </div>
+              <div className="tip-card">
+                <div className="tip-icon">😊</div>
+                <div className="tip-title">Make It Fun</div>
+                <div className="tip-text">Use encouraging language and turn tests into engaging activities</div>
+              </div>
+              <div className="tip-card">
+                <div className="tip-icon">📋</div>
+                <div className="tip-title">Follow Protocol</div>
+                <div className="tip-text">Consistent procedures ensure reliable, comparable results</div>
+              </div>
+              <div className="tip-card">
+                <div className="tip-icon">🎧</div>
+                <div className="tip-title">Check Equipment</div>
+                <div className="tip-text">Calibrate headphones and verify device settings before starting</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Collapsible Quick Start */}
+          <div className="quick-start-section">
+            <button 
+              className="quick-start-toggle"
+              onClick={() => setShowQuickStart(!showQuickStart)}
+            >
+              <span className="toggle-icon">{showQuickStart ? '▼' : '▶'}</span>
+              <span className="toggle-text">Quick Start Guide</span>
+            </button>
+            
+            {showQuickStart && (
+              <div className="quick-start-content">
+                <ol className="quick-start-steps">
+                  <li>
+                    <strong>Import Student Roster:</strong> Click "Import Student Roster" to load your class list (JSON/CSV format)
+                  </li>
+                  <li>
+                    <strong>Enter Your Information:</strong> Fill in your name and school code above
+                  </li>
+                  <li>
+                    <strong>Start Screening:</strong> Tap the "Start Screening" button to begin
+                  </li>
+                  <li>
+                    <strong>Identify Student:</strong> Scan QR code or search by name
+                  </li>
+                  <li>
+                    <strong>Conduct Tests:</strong> Complete vision test (ETDRS chart) and hearing test (frequency identification)
+                  </li>
+                  <li>
+                    <strong>Review & Export:</strong> View results and export to EMR or file
+                  </li>
+                </ol>
+                
+                <div className="quick-start-footer">
+                  <p>💾 <strong>Offline Ready:</strong> All data is stored locally - no internet required during screening</p>
+                  <p>🔒 <strong>HIPAA Compliant:</strong> Your data is secure and private</p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
