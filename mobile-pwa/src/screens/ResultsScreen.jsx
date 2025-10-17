@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../services/indexedDB';
+import VisionReport from '../components/VisionReport';
 import './ResultsScreen.css';
 
 function ResultsScreen({ navigate, data }) {
   const [allResults, setAllResults] = useState([]);
   const [selectedResult, setSelectedResult] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showVisionReport, setShowVisionReport] = useState(false);
 
   useEffect(() => {
     loadResults();
@@ -70,6 +72,15 @@ function ResultsScreen({ navigate, data }) {
       age--;
     }
     return age;
+  };
+
+  const handleViewVisionReport = (result) => {
+    setSelectedResult(result);
+    setShowVisionReport(true);
+  };
+
+  const handleCloseVisionReport = () => {
+    setShowVisionReport(false);
   };
 
   if (loading) {
@@ -258,8 +269,20 @@ function ResultsScreen({ navigate, data }) {
             >
               🗑️ Delete Result
             </button>
+            <button
+              className="button button-secondary"
+              onClick={() => handleViewVisionReport(selectedResult)}
+            >
+              📊 View Vision Report
+            </button>
           </div>
         </div>
+        {showVisionReport && (
+          <VisionReport
+            result={selectedResult}
+            onClose={handleCloseVisionReport}
+          />
+        )}
       </div>
     );
   }
