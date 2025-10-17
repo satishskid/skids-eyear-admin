@@ -9,7 +9,6 @@ redirects = []
 [build]
 publish = "/Users/spr/skidsgck"
 publishOrigin = "default"
-base = "/Users/spr/skidsgck"
 
 [build.environment]
 
