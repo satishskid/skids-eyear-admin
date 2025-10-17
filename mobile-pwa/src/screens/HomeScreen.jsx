@@ -54,6 +54,113 @@ function HomeScreen({ navigate }) {
     navigate('qr-scanner', { screenerName, schoolCode });
   };
 
+  const exportAllData = async () => {
+    try {
+      const children = await db.getAllChildren();
+      const results = await db.getAllResults();
+      
+      if (children.length === 0 && results.length === 0) {
+        alert('⚠️ No data to export. Import students and complete screenings first.');
+        return;
+      }
+
+      const timestamp = new Date().toISOString().split('T')[0];
+      
+      // Create comprehensive JSON export
+      const exportData = {
+        export_date: new Date().toISOString(),
+        school_code: schoolCode || 'Unknown',
+        screener_name: screenerName || 'Unknown',
+        students: children,
+        screening_results: results,
+        summary: {
+          total_students: children.length,
+          total_screenings: results.length,
+          pass_rate: results.length > 0 
+            ? ((results.filter(r => r.vision_result?.pass && r.hearing_result?.pass).length / results.length) * 100).toFixed(1) + '%'
+            : 'N/A'
+        }
+      };
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `skids-export-all-${schoolCode || 'school'}-${timestamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      alert(`✅ Exported all data!\n\n${children.length} students\n${results.length} screening results\n\nFile saved as JSON for backup or transfer to another device.`);
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('❌ Export failed: ' + error.message);
+    }
+  };
+
+  const downloadSampleRoster = () => {
+    const sampleData = [
+      {
+        id: 'STU001',
+        name: 'John Doe',
+        date_of_birth: '2010-05-15',
+        grade: '5',
+        school_code: schoolCode || 'SCH001',
+        parent_contact: '555-1234'
+      },
+      {
+        id: 'STU002',
+        name: 'Jane Smith',
+        date_of_birth: '2011-08-22',
+        grade: '4',
+        school_code: schoolCode || 'SCH001',
+        parent_contact: '555-5678'
+      },
+      {
+        id: 'STU003',
+        name: 'Michael Johnson',
+        date_of_birth: '2012-03-10',
+        grade: '3',
+        school_code: schoolCode || 'SCH001',
+        parent_contact: '555-9012'
+      }
+    ];
+
+    // Create CSV
+    const headers = ['id', 'name', 'date_of_birth', 'grade', 'school_code', 'parent_contact'];
+    const csvContent = [
+      headers.join(','),
+      ...sampleData.map(row => headers.map(h => `"${row[h]}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sample-roster-${schoolCode || 'school'}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    alert('📥 Sample roster CSV downloaded! Fill it with your students and re-import.');
+  };
+
+  const parseCSV = (text) => {
+    const lines = text.trim().split('\n');
+    const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
+    
+    return lines.slice(1).map(line => {
+      const values = line.split(',').map(v => v.replace(/"/g, '').trim());
+      const obj = {};
+      headers.forEach((header, index) => {
+        obj[header] = values[index];
+      });
+      return obj;
+    });
+  };
+
   const handleImportRoster = async () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -64,14 +171,21 @@ function HomeScreen({ navigate }) {
 
       try {
         const text = await file.text();
-        const children = JSON.parse(text);
+        let children;
+
+        // Parse based on file type
+        if (file.name.endsWith('.csv')) {
+          children = parseCSV(text);
+        } else {
+          children = JSON.parse(text);
+        }
         
-        if (Array.isArray(children)) {
+        if (Array.isArray(children) && children.length > 0) {
           const count = await db.importChildren(children);
-          alert(`✅ Imported ${count} children`);
+          alert(`✅ Imported ${count} children successfully!`);
           loadStats();
         } else {
-          alert('❌ Invalid file format');
+          alert('❌ Invalid file format or empty roster');
         }
       } catch (error) {
         console.error('Import error:', error);
@@ -149,7 +263,15 @@ function HomeScreen({ navigate }) {
             className="button button-secondary"
             onClick={() => navigate('export')}
           >
-            📤 Export Data
+            📤 Export Results (CSV/FHIR/HL7)
+          </button>
+
+          <button
+            className="button button-secondary"
+            onClick={exportAllData}
+            title="Export complete database backup (students + results)"
+          >
+            💾 Backup All Data
           </button>
 
           <button
@@ -157,6 +279,14 @@ function HomeScreen({ navigate }) {
             onClick={handleImportRoster}
           >
             📥 Import Student Roster
+          </button>
+
+          <button
+            className="button button-secondary"
+            onClick={downloadSampleRoster}
+            title="Download a sample CSV template to fill with your students"
+          >
+            📋 Download Sample Roster
           </button>
         </div>
 
